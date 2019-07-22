@@ -1,2 +1,4 @@
 # DeepLearning-Vision
-Importan API library for CNN
+Important API library for CNN
+
+LRfinder: https://github.com/surmenok/keras_lr_finder
