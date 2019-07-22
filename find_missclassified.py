@@ -1,3 +1,9 @@
+from keras.models import load_model
+from keras.preprocessing.image import save_img
+from sklearn.metrics import classification_report, confusion_matrix
+import numpy as np
+
+
 def find_misclassified_images (model_path, test_iterator, test_label): 
 #Load the best saved model and create predictions on the test set
 
@@ -18,7 +24,7 @@ def find_misclassified_images (model_path, test_iterator, test_label):
 
   return incorrect_indices
 
-def print_save_misclassified_images(save_flag = 0,save_path,incorrect_indices,number,x_test,y_pred,y_test):
+def print_save_misclassified_images(incorrect_indices,number,x_test,y_pred,y_test,save_path,save_flag=0):
   
   for i, incorrect in enumerate(incorrect_indices[:number]):
     
