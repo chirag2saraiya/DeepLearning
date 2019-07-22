@@ -1,9 +1,3 @@
-from keras.models import load_model
-from keras.preprocessing.image import save_img
-from sklearn.metrics import classification_report, confusion_matrix
-import numpy as np
-
-
 def find_misclassified_images (model_path, test_iterator, test_label): 
 #Load the best saved model and create predictions on the test set
 
@@ -24,23 +18,23 @@ def find_misclassified_images (model_path, test_iterator, test_label):
 
   return incorrect_indices
 
-def print_save_misclassified_images(save_flag,save_path,incorrect_indices,number):
+def print_save_misclassified_images(save_flag = 0,save_path,incorrect_indices,number,x_test,y_pred,y_test):
   
   for i, incorrect in enumerate(incorrect_indices[:number]):
     
-  if save_flag == 1 :
-    filepath2="{}{}.{}".format(save_path,i,".jpg")
+    if save_flag == 1 :
+      filepath2="{}{}.{}".format(save_path,i,".jpg")
   
-  #print(filepath2)
+    #print(filepath2)
   
-  save_img(filepath2, X_test[incorrect])
+    save_img(filepath2, X_test[incorrect])
 
-  plt.imshow(X_test[incorrect].reshape(28,28), cmap='gray', interpolation='none')
+    plt.imshow(x_test[incorrect].reshape(28,28), cmap='gray', interpolation='none')
 
-  plt.title( "Predicted {}, Truth: {}".format(y_pred[incorrect], y_test[incorrect]))
+    plt.title( "Predicted {}, Truth: {}".format(y_pred[incorrect], y_test[incorrect]))
 
-  plt.xticks([])
+    plt.xticks([])
 
-  plt.yticks([])
+    plt.yticks([])
 
-  plt.show()
+    plt.show()
