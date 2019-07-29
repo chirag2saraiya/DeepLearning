@@ -9,8 +9,8 @@ from keras import backend as K
 # Code is ported from https://github.com/fastai/fastai
 class OneCycleLR(Callback):
     def __init__(self,
-                 num_samples, 
-                 num_epoch, 
+                 samples, 
+                 epochs, 
                  batch_size,
                  max_lr,
                  end_percentage=0.1,
@@ -69,9 +69,9 @@ class OneCycleLR(Callback):
         self.clr_iterations = 0.
         self.history = {}
 
-        self.epochs = num_epoch
+        self.epochs = epochs
         self.batch_size = batch_size
-        self.samples = num_samples
+        self.samples = samples
         self.steps = None
         self.num_iterations = None
         self.mid_cycle_id = None
