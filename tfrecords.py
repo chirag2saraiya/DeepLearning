@@ -94,6 +94,23 @@ def parse_record(serialized_example):
 
   return image, label
 
+def preprocess_image(image, is_training=False):
+  """Preprocess a single image of layout [height, width, depth]."""
+  if is_training:
+    # Resize the image to add four extra pixels on each side.
+    image = tf.image.resize_image_with_crop_or_pad(
+        image, IMAGE_HEIGHT + 8, IMAGE_WIDTH + 8)
+
+    # Randomly crop a [_HEIGHT, _WIDTH] section of the image.
+    image = tf.random_crop(image, [IMAGE_HEIGHT, IMAGE_WIDTH, IMAGE_DEPTH])
+
+    # Randomly flip the image horizontally.
+    image = tf.image.random_flip_left_right(image)
+
+  # Subtract off the mean and divide by the variance of the pixels.
+  image = tf.image.per_image_standardization(image)
+  return image
+
 def generate_input_fn(file_names, mode='validate', batch_size=1):
   
     dataset = tf.data.TFRecordDataset(filenames=file_names)
