@@ -132,9 +132,9 @@ def generate_input_fn(file_names, mode='validate', batch_size=1):
     images, labels = dataset.make_one_shot_iterator().get_next()
 
         # Bring your picture back in shape
-    images = tf.reshape(image, [-1, 32, 32, 3])
+    images = tf.reshape(images, [-1, 32, 32, 3])
     
     # Create a one hot array for your labels
-    labels = tf.one_hot(label, NUM_CLASSES)
+    labels = tf.one_hot(labels, NUM_CLASSES)
     
     return images, labels
