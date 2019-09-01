@@ -140,19 +140,19 @@ def generate_input_fn(file_names, mode='validate', batch_size=1):
     return images, labels
   
   
-  def _parse_function(proto):
-    # define your tfrecord again. Remember that you saved your image as a string.
-    keys_to_features = {'image': tf.FixedLenFeature([], tf.string),
+def _parse_function(proto):
+  # define your tfrecord again. Remember that you saved your image as a string.
+  keys_to_features = {'image': tf.FixedLenFeature([], tf.string),
                         "label": tf.FixedLenFeature([], tf.int64)}
     
-    # Load one example
-    parsed_features = tf.parse_single_example(proto, keys_to_features)
+  # Load one example
+  parsed_features = tf.parse_single_example(proto, keys_to_features)
     
-    # Turn your saved image string into an array
-    parsed_features['image'] = tf.decode_raw(
-        parsed_features['image'], tf.uint8)
+  # Turn your saved image string into an array
+  parsed_features['image'] = tf.decode_raw(
+  parsed_features['image'], tf.uint8)
     
-    return parsed_features['image'], parsed_features["label"]
+  return parsed_features['image'], parsed_features["label"]
 
   
 def create_dataset(filepath):
