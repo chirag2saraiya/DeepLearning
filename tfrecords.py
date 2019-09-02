@@ -131,57 +131,26 @@ def generate_input_fn(file_names, mode='validate', batch_size=1):
 
     images, labels = dataset.make_one_shot_iterator().get_next()
 
-        # Bring your picture back in shape
-    images = tf.reshape(images, [-1, 32, 32, 3])
-    
-    # Create a one hot array for your labels
-    labels = tf.one_hot(labels, NUM_CLASSES)
-    
-    return images, labels
+    features = {'images': images}
+    print ("done")
+    return features, labels
   
   
-def _parse_function(proto):
-  # define your tfrecord again. Remember that you saved your image as a string.
-  keys_to_features = {'image': tf.FixedLenFeature([], tf.string),
-                        "label": tf.FixedLenFeature([], tf.int64)}
-    
-  # Load one example
-  parsed_features = tf.parse_single_example(proto, keys_to_features)
-    
-  # Turn your saved image string into an array
-  parsed_features['image'] = tf.decode_raw(
-  parsed_features['image'], tf.uint8)
-    
-  return parsed_features['image'], parsed_features["label"]
+  
+def parse_record(serialized_example):
+  features = tf.parse_single_example(
+    serialized_example,
+    features={
+      'image': tf.FixedLenFeature([], tf.string),
+      'label': tf.FixedLenFeature([], tf.int64),
+    })
+  
+  image = tf.decode_raw(features['image'], tf.uint8)
+  image.set_shape([IMAGE_DEPTH * IMAGE_HEIGHT * IMAGE_WIDTH])
+  image = tf.reshape(image, [IMAGE_DEPTH, IMAGE_HEIGHT, IMAGE_WIDTH])
+  image = tf.cast(tf.transpose(image, [1, 2, 0]), tf.float32)
+  
+  label = tf.cast(features['label'], tf.int32)
+  label = tf.one_hot(label, NUM_CLASSES)
 
-  
-def create_dataset(filepath):
-    
-    # This works with arrays as well
-    dataset = tf.data.TFRecordDataset(filepath)
-    
-    # Maps the parser on every filepath in the array. You can set the number of parallel loaders here
-    dataset = dataset.map(_parse_function, num_parallel_calls=8)
-    
-    # This dataset will go on forever
-    dataset = dataset.repeat()
-    
-    # Set the number of datapoints you want to load and shuffle 
-    dataset = dataset.shuffle(SHUFFLE_BUFFER)
-    
-    # Set the batchsize
-    dataset = dataset.batch(BATCH_SIZE)
-    
-    # Create an iterator
-    iterator = dataset.make_one_shot_iterator()
-    
-    # Create your tf representation of the iterator
-    image, label = iterator.get_next()
-
-    # Bring your picture back in shape
-    image = tf.reshape(image, [-1, 256, 256, 1])
-    
-    # Create a one hot array for your labels
-    label = tf.one_hot(label, NUM_CLASSES)
-    
-    return image, label
+  return image, label
