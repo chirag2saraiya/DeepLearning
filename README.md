@@ -10,3 +10,7 @@ OneCycleLR : https://github.com/titu1994/keras-one-cycle
 AutoAugment:https://github.com/DeepVoltaire/AutoAugment
 
 TF Record: https://github.com/tensorflow/models/blob/master/research/slim/datasets/
+
+Earlystop Callback: example 
+callbacks = [TerminateOnBaseline(monitor='acc', baseline=0.8)]
+callbacks = [TerminateOnBaseline(monitor='val_acc', baseline=0.95)]
