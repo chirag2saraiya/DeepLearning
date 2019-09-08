@@ -35,7 +35,7 @@ def download_and_extract(dataset_dir):
     print('Successfully downloaded', filename, statinfo.st_size, 'bytes.')
     tarfile.open(filepath, 'r:gz').extractall(dataset_dir)
 
-def _clean_up_temporary_files(dataset_dir):
+def clean_up_temporary_files(dataset_dir):
   """Removes temporary files used to create the dataset.
   Args:
     dataset_dir: The directory where the temporary files are stored.
