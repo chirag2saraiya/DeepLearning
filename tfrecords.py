@@ -21,38 +21,13 @@ DEPTH = 3
 NUM_CLASSES = 10
 
 
-def download_and_extract(dataset_dir):
-  """Downloads cifar10 and uncompresses it locally.
-  Args:
-    dataset_dir: The directory where the temporary files are stored.
-  """
-  filename = CIFAR_DOWNLOAD_URL.split('/')[-1]
-  filepath = os.path.join(dataset_dir, filename)
-
-  if not os.path.exists(filepath):
-    def _progress(count, block_size, total_size):
-      sys.stdout.write('\r>> Downloading %s %.1f%%' % (
-          filename, float(count * block_size) / float(total_size) * 100.0))
-      sys.stdout.flush()
-    filepath, _ = urllib.request.urlretrieve(CIFAR_DOWNLOAD_URL, filepath, _progress)
-    print()
-    statinfo = os.stat(filepath)
-    print('Successfully downloaded', filename, statinfo.st_size, 'bytes.')
-    tarfile.open(filepath, 'r:gz').extractall(dataset_dir)
-
-def clean_up_temporary_files(dataset_dir):
-  """Removes temporary files used to create the dataset.
-  Args:
-    dataset_dir: The directory where the temporary files are stored.
-  """
-  filename = CIFAR_DOWNLOAD_URL.split('/')[-1]
-  filepath = os.path.join(dataset_dir, filename)
-  tf.gfile.Remove(filepath)
-
-  tmp_dir = os.path.join(dataset_dir, 'cifar-10-batches-py')
-  tf.gfile.DeleteRecursively(tmp_dir)
+def download_and_extract(data_dir):
+  # download CIFAR-10 if not already downloaded.
+  tf.contrib.learn.datasets.base.maybe_download(CIFAR_FILENAME, data_dir,
+                                                CIFAR_DOWNLOAD_URL)
+  tarfile.open(os.path.join(data_dir, CIFAR_FILENAME),
+               'r:gz').extractall(data_dir)
   
-
 def _int64_feature(value):
   return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
 
@@ -111,7 +86,6 @@ def convert(data_dir):
       pass
       # Convert to tf.train.Example and write the to TFRecords.
     convert_to_tfrecord(input_files, output_file)
-    clean_up_temporary_files(data_dir)
   print('Done!')
   
 class Cifar10DataSet(object):
