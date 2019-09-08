@@ -1,32 +1,45 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
+import argparse
 import os
 import sys
-import tarfile
 
-import numpy as np
+import tarfile
 from six.moves import cPickle as pickle
-from six.moves import urllib
+from six.moves import xrange  # pylint: disable=redefined-builtin
 import tensorflow as tf
 
 CIFAR_FILENAME = 'cifar-10-python.tar.gz'
-CIFAR_DOWNLOAD_URL = 'http://www.cs.toronto.edu/~kriz/' + CIFAR_FILENAME
+CIFAR_DOWNLOAD_URL = 'https://www.cs.toronto.edu/~kriz/' + CIFAR_FILENAME
 CIFAR_LOCAL_FOLDER = 'cifar-10-batches-py'
 
-IMAGE_HEIGHT = 32
-IMAGE_WIDTH = 32
-IMAGE_DEPTH = 3
-NUM_CLASSES = 10
 
 def download_and_extract(data_dir):
-  tf.contrib.learn.datasets.base.maybe_download(CIFAR_FILENAME, data_dir, CIFAR_DOWNLOAD_URL)
-  tarfile.open(os.path.join(data_dir, CIFAR_FILENAME), 'r:gz').extractall(data_dir)
+  # download CIFAR-10 if not already downloaded.
+  tf.contrib.learn.datasets.base.maybe_download(CIFAR_FILENAME, data_dir,
+                                                CIFAR_DOWNLOAD_URL)
+  tarfile.open(os.path.join(data_dir, CIFAR_FILENAME),
+               'r:gz').extractall(data_dir)
+
+
+def _int64_feature(value):
+  return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
+
+
+def _bytes_feature(value):
+  return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
+
 
 def _get_file_names():
   """Returns the file names expected to exist in the input_dir."""
   file_names = {}
-  file_names['train'] = ['data_batch_%d' % i for i in range(1, 6)]
-  file_names['validation'] = ['test_batch']
+  file_names['train'] = ['data_batch_%d' % i for i in xrange(1, 6)]
+  file_names['test'] = ['test_batch']
   #file_names['eval'] = ['test_batch']
   return file_names
+
 
 def read_pickle_from_file(filename):
   with tf.gfile.Open(filename, 'rb') as f:
@@ -35,14 +48,8 @@ def read_pickle_from_file(filename):
     else:
       data_dict = pickle.load(f)
   return data_dict
-  
-def _int64_feature(value):
-  return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
 
 
-def _bytes_feature(value):
-  return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
-  
 def convert_to_tfrecord(input_files, output_file):
   """Converts a file to TFRecords."""
   print('Generating %s' % output_file)
@@ -59,8 +66,9 @@ def convert_to_tfrecord(input_files, output_file):
                 'label': _int64_feature(labels[i])
             }))
         record_writer.write(example.SerializeToString())
-        
-def create_tfrecords_files(data_dir='cifar-10'):
+
+
+def convert(data_dir):
   print('Download from {} and extract.'.format(CIFAR_DOWNLOAD_URL))
   download_and_extract(data_dir)
   file_names = _get_file_names()
@@ -72,85 +80,95 @@ def create_tfrecords_files(data_dir='cifar-10'):
       os.remove(output_file)
     except OSError:
       pass
-    # Convert to tf.train.Example and write the to TFRecords.
+      # Convert to tf.train.Example and write the to TFRecords.
     convert_to_tfrecord(input_files, output_file)
   print('Done!')
   
-def parse_record(serialized_example):
-  features = tf.parse_single_example(
-    serialized_example,
-    features={
-      'image': tf.FixedLenFeature([], tf.string),
-      'label': tf.FixedLenFeature([], tf.int64),
-    })
-  
-  image = tf.decode_raw(features['image'], tf.uint8)
-  image.set_shape([IMAGE_DEPTH * IMAGE_HEIGHT * IMAGE_WIDTH])
-  image = tf.reshape(image, [IMAGE_DEPTH, IMAGE_HEIGHT, IMAGE_WIDTH])
-  image = tf.cast(tf.transpose(image, [1, 2, 0]), tf.float32)
-  
-  label = tf.cast(features['label'], tf.int32)
-  label = tf.one_hot(label, NUM_CLASSES)
+HEIGHT = 32
+WIDTH = 32
+DEPTH = 3
+NUM_CLASSES = 10
 
-  return image, label
+class Cifar10DataSet(object):
+  """Cifar10 data set.
+  Described by http://www.cs.toronto.edu/~kriz/cifar.html.
+  """
 
-def preprocess_image(image, is_training=False):
-  """Preprocess a single image of layout [height, width, depth]."""
-  if is_training:
-    # Resize the image to add four extra pixels on each side.
-    image = tf.image.resize_image_with_crop_or_pad(
-        image, IMAGE_HEIGHT + 8, IMAGE_WIDTH + 8)
+  def __init__(self, data_dir, subset='train', use_distortion=True):
+    self.data_dir = data_dir
+    self.subset = subset
+    self.use_distortion = use_distortion
 
-    # Randomly crop a [_HEIGHT, _WIDTH] section of the image.
-    image = tf.random_crop(image, [IMAGE_HEIGHT, IMAGE_WIDTH, IMAGE_DEPTH])
+  def get_filenames(self):
+    if self.subset in ['train', 'test']:
+      return [os.path.join(self.data_dir, self.subset + '.tfrecords')]
+    else:
+      raise ValueError('Invalid data subset "%s"' % self.subset)
 
-    # Randomly flip the image horizontally.
-    image = tf.image.random_flip_left_right(image)
+  def parser(self, serialized_example):
+    """Parses a single tf.Example into image and label tensors."""
+    # Dimensions of the images in the CIFAR-10 dataset.
+    # See http://www.cs.toronto.edu/~kriz/cifar.html for a description of the
+    # input format.
+    features = tf.parse_single_example(
+        serialized_example,
+        features={
+            'image': tf.FixedLenFeature([], tf.string),
+            'label': tf.FixedLenFeature([], tf.int64),
+        })
+    image = tf.decode_raw(features['image'], tf.uint8)
+    image.set_shape([DEPTH * HEIGHT * WIDTH])
 
-  # Subtract off the mean and divide by the variance of the pixels.
-  image = tf.image.per_image_standardization(image)
-  return image
+    # Reshape from [depth * height * width] to [depth, height, width].
+    image = tf.cast(
+        tf.transpose(tf.reshape(image, [DEPTH, HEIGHT, WIDTH]), [1, 2, 0]),
+        tf.float32)
+    label = tf.cast(features['label'], tf.int32)
+    label = tf.one_hot(label, NUM_CLASSES)
+    # Custom preprocessing.
+    image = self.preprocess(image)
 
-def generate_input_fn(file_names, mode='validate', batch_size=1):
-  
-    dataset = tf.data.TFRecordDataset(filenames=file_names)
+    return image, label
 
-    is_training = (mode == 'train')
-    if is_training:
-      buffer_size = batch_size * 2 + 1
-      dataset = dataset.shuffle(buffer_size=buffer_size)
+  def make_batch(self, batch_size):
+    """Read the images and labels from 'filenames'."""
+    filenames = self.get_filenames()
+    # Repeat infinitely.
+    dataset = tf.data.TFRecordDataset(filenames).repeat()
 
-    # Transformation
-    dataset = dataset.map(parse_record)
-  #  dataset = dataset.map(
-     # lambda image, label: (preprocess_image(image, is_training), label))
+    # Parse records.
+    dataset = dataset.map(
+        self.parser, num_parallel_calls=64)
 
-    dataset = dataset.repeat()
+    # Potentially shuffle records.
+    if self.subset == 'train':
+      min_queue_examples = int(
+          Cifar10DataSet.num_examples_per_epoch(self.subset) * 0.4)
+      # Ensure that the capacity is sufficiently large to provide good random
+      # shuffling.
+      dataset = dataset.shuffle(buffer_size=min_queue_examples + 3 * batch_size)
+
+    # Batch it up.
     dataset = dataset.batch(batch_size)
-    dataset = dataset.prefetch(2 * batch_size)
+    iterator = dataset.make_one_shot_iterator()
+    image_batch, label_batch = iterator.get_next()
 
-    images, labels = dataset.make_one_shot_iterator().get_next()
+    return image_batch, label_batch
 
-    features = {'images': images}
-    print ("done")
-    return features, labels
-  
-  
-  
-def parse_record(serialized_example):
-  features = tf.parse_single_example(
-    serialized_example,
-    features={
-      'image': tf.FixedLenFeature([], tf.string),
-      'label': tf.FixedLenFeature([], tf.int64),
-    })
-  
-  image = tf.decode_raw(features['image'], tf.uint8)
-  image.set_shape([IMAGE_DEPTH * IMAGE_HEIGHT * IMAGE_WIDTH])
-  image = tf.reshape(image, [IMAGE_DEPTH, IMAGE_HEIGHT, IMAGE_WIDTH])
-  image = tf.cast(tf.transpose(image, [1, 2, 0]), tf.float32)
-  
-  label = tf.cast(features['label'], tf.int32)
-  label = tf.one_hot(label, NUM_CLASSES)
+  def preprocess(self, image):
+    """Preprocess a single image in [height, width, depth] layout."""
+    if self.subset == 'train' and self.use_distortion:
+      # Pad 4 pixels on each dimension of feature map, done in mini-batch
+      image = tf.image.resize_image_with_crop_or_pad(image, 40, 40)
+      image = tf.random_crop(image, [HEIGHT, WIDTH, DEPTH])
+      image = tf.image.random_flip_left_right(image)
+    return image
 
-  return image, label
+  @staticmethod
+  def num_examples_per_epoch(subset='train'):
+    if subset == 'train':
+      return 50000
+    elif subset == 'test':
+      return 10000
+    else:
+      raise ValueError('Invalid data subset "%s"' % subset)
