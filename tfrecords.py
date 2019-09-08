@@ -14,6 +14,10 @@ import tensorflow as tf
 CIFAR_FILENAME = 'cifar-10-python.tar.gz'
 CIFAR_DOWNLOAD_URL = 'https://www.cs.toronto.edu/~kriz/' + CIFAR_FILENAME
 CIFAR_LOCAL_FOLDER = 'cifar-10-batches-py'
+HEIGHT = 32
+WIDTH = 32
+DEPTH = 3
+NUM_CLASSES = 10
 
 
 def download_and_extract(dataset_dir):
@@ -109,11 +113,6 @@ def convert(data_dir):
     clean_up_temporary_files(data_dir)
   print('Done!')
   
-HEIGHT = 32
-WIDTH = 32
-DEPTH = 3
-NUM_CLASSES = 10
-
 class Cifar10DataSet(object):
   """Cifar10 data set.
   Described by http://www.cs.toronto.edu/~kriz/cifar.html.
