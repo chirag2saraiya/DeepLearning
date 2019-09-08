@@ -35,7 +35,18 @@ def download_and_extract(dataset_dir):
     print('Successfully downloaded', filename, statinfo.st_size, 'bytes.')
     tarfile.open(filepath, 'r:gz').extractall(dataset_dir)
 
+def _clean_up_temporary_files(dataset_dir):
+  """Removes temporary files used to create the dataset.
+  Args:
+    dataset_dir: The directory where the temporary files are stored.
+  """
+  filename = CIFAR_DOWNLOAD_URL.split('/')[-1]
+  filepath = os.path.join(dataset_dir, filename)
+  tf.gfile.Remove(filepath)
 
+  tmp_dir = os.path.join(dataset_dir, 'cifar-10-batches-py')
+  tf.gfile.DeleteRecursively(tmp_dir)
+  
 
 def _int64_feature(value):
   return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
@@ -95,6 +106,7 @@ def convert(data_dir):
       pass
       # Convert to tf.train.Example and write the to TFRecords.
     convert_to_tfrecord(input_files, output_file)
+    clean_up_temporary_files(data_dir)
   print('Done!')
   
 HEIGHT = 32
