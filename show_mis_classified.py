@@ -1,6 +1,10 @@
-#block_row : rows in image block grid
-#block_column: column in image block grid
+import matplotlib.pyplot as plt
+
+#rows : rows in image block grid
+#columns: column in image block grid
 #type : misclassified/ParticularClass/Random/MisclassifiedClass
+#class : class of misclassified image
+#y_pred
 
 def showAndPlotImage(rows, columns, type, class, y_pred, y_test,x_test):
   if(type == "misclassified"):
