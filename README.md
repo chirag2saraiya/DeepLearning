@@ -16,3 +16,8 @@ Earlystop Callback: example
 callbacks = [TerminateOnBaseline(monitor='acc', baseline=0.8)]
 
 callbacks = [TerminateOnBaseline(monitor='val_acc', baseline=0.95)]
+
+K-Means clustering to find bounding box:
+https://github.com/lars76/kmeans-anchor-boxes
+https://lars76.github.io/object-detection/k-means-anchor-boxes/
+
